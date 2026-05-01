@@ -145,3 +145,87 @@ export async function savePatient(patientData) {
   if (error) throw error
   return data
 }
+
+/**
+ * Busca os dados completos de um único paciente
+ */
+export async function getPatientById(id) {
+  const { data, error } = await supabase
+    .from('pacientes')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Atualiza os dados de um paciente
+ */
+export async function updatePatient(id, patientData) {
+  const { data, error } = await supabase
+    .from('pacientes')
+    .update(patientData)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Busca histórico de consultas de um paciente
+ */
+export async function getConsultationsByPatientId(patientId) {
+  const { data, error } = await supabase
+    .from('consultas')
+    .select('*')
+    .eq('paciente_id', patientId)
+    .order('data_consulta', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Salva uma nova consulta
+ */
+export async function saveConsultation(consultationData) {
+  const { data, error } = await supabase
+    .from('consultas')
+    .insert([consultationData])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Busca histórico de planos alimentares de um paciente
+ */
+export async function getMealPlansByPatientId(patientId) {
+  const { data, error } = await supabase
+    .from('planos_alimentares')
+    .select('*')
+    .eq('paciente_id', patientId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+/**
+ * Salva um novo plano alimentar
+ */
+export async function saveMealPlan(mealPlanData) {
+  const { data, error } = await supabase
+    .from('planos_alimentares')
+    .insert([mealPlanData])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
