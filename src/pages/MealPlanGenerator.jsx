@@ -17,25 +17,45 @@ export default function MealPlanGenerator({ user, patient, activeTab, setActiveT
   const handleGenerateAI = async () => {
     setIsGenerating(true)
     setError(null)
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke('gerar-plano', {
-        body: { patientData: patient }
-      })
 
-      if (fnError) throw fnError
+    try {
+      // Chamada para o nosso backend (Serverless Function) para proteger a API Key
+      const response = await fetch('/api/gerar-plano', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ patientData: patient }),
+      });
+
+      let data;
+      const contentType = response.headers.get("content-type");
+      
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Resposta não-JSON recebida:', text);
+        throw new Error('O servidor de API não respondeu com JSON. Certifique-se de que o backend está rodando (use vercel dev).');
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao gerar plano com IA');
+      }
       
       if (data && data.plano_semanal) {
-        setPlanoSemanal(data.plano_semanal)
+        setPlanoSemanal(data.plano_semanal);
       } else {
-        throw new Error("Formato de resposta inválido da IA.")
+        throw new Error('Formato de resposta inválido da IA');
       }
     } catch (err) {
-      console.error(err)
-      setError("Erro ao gerar plano com IA. Verifique se a GOOGLE_API_KEY está configurada corretamente nos Secrets do Supabase.")
+      console.error('Erro na geração com IA:', err);
+      setError(err.message);
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
+
 
   const handleOptionChange = (dayIndex, mealKey, optionIndex, value) => {
     const newPlano = [...planoSemanal]
@@ -170,15 +190,37 @@ export default function MealPlanGenerator({ user, patient, activeTab, setActiveT
             <p style={{ maxWidth: '500px', margin: '0 auto 20px', color: 'var(--text-muted)' }}>
               A IA analisará os objetivos, alergias e restrições de <strong>{patient.nome}</strong> para gerar um plano semanal personalizado com 5 opções por refeição.
             </p>
-            <button 
-              onClick={handleGenerateAI}
-              className="btn"
-              style={{ width: 'auto', padding: '12px 40px' }}
-            >
-              Iniciar Geração Automática
-            </button>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+              <button 
+                onClick={handleGenerateAI}
+                className="btn"
+                style={{ width: 'auto', padding: '12px 40px' }}
+              >
+                🪄 Gerar com IA
+              </button>
+              <button 
+                onClick={() => {
+                  const emptyPlan = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"].map(dia => ({
+                    dia,
+                    refeicoes: {
+                      cafe_da_manha: ["", "", "", "", ""],
+                      lanche_manha: ["", "", "", "", ""],
+                      almoco: ["", "", "", "", ""],
+                      lanche_tarde: ["", "", "", "", ""],
+                      jantar: ["", "", "", "", ""]
+                    }
+                  }))
+                  setPlanoSemanal(emptyPlan)
+                }}
+                className="btn-secondary btn"
+                style={{ width: 'auto', padding: '12px 40px', background: '#e2e8f0' }}
+              >
+                📝 Criar Manualmente
+              </button>
+            </div>
           </div>
         )}
+
       </div>
     </div>
   )
